@@ -5,12 +5,12 @@ SUITS = ['s','h','d','c']
 VALUES = ['9','T','J','Q','K','A']
 
 class Game:
-    def _init_(self, players):#players is an array of player instances
+    def __init__(self, players):#players is an array of player instances
         if len(players) != 4:
             raise IllegalPlayException("Game only supports 4 players")
         self.players = players #constant for entire existence
         self.dealerIndex = 3 #index of the dealer in _players. Changes each hand
-        self.playersOrder = copy.copy(self._players)#shallow copy of players that can be rotated
+        self.playersOrder = copy.copy(self.players)#shallow copy of players that can be rotated
 
         #set positions and teams
         self.teams = [[],[]]
@@ -18,12 +18,12 @@ class Game:
         self.inactives = [] #current inactive players for the hand. Only nonempty when going alone
         for p in self.playersOrder:
             p.game = self
-            if p == self.PlayersOrder[0] or p==self.playersOrder[2]:
+            if p == self.playersOrder[0] or p==self.playersOrder[2]:
                 p.teamNum = 1
-                self._teams[0].append(p)
+                self.teams[0].append(p)
             else:
                 p.teamNum = 2
-                self._teams[1].append(p)
+                self.teams[1].append(p)
         self.gameScore = {1:0,2:0}#current score of the game
         self.tricksScore = {1:0,2:0}#current score of a hand
         self._deck = None
@@ -45,9 +45,10 @@ class Game:
             print("GAME OVER!")
         #return value indicating which team won
         if self.gameScore[1]>=neededScore:
+            #team 1 won (p1 and p3)
             return 1
+        #team 2 won (p2 and p4)
         return 0
-
     def play_hand(self,printOutput):
         self._rotate_until_dealer(self.dealerIndex)
         self.dealer = self.playersOrder[3]
@@ -70,10 +71,15 @@ class Game:
                 #find led suit
                 if len(trick)==0:
                     #this is the first card in the trick
-                    ledSuit = self.get_card_suit(card,self.trump)
+                    ledSuit = self.get_suit(card,self.trump)
+
+
                 #check for illegal play
-                playedSuit = self.get_card_suit(card,self.trump)
-                if playedSuit!=ledSuit:
+                playedSuit = self.get_suit(card,self.trump)
+
+
+
+                if (playedSuit!=ledSuit) and (self.has_suit(self._hands[p],self.trump,ledSuit)):
                     raise IllegalPlayException("Must play the led suit if you have it")
                 if card not in self._hands[p]:
                     raise IllegalPlayException("player does not have that card to play")
@@ -100,7 +106,7 @@ class Game:
         self.tricksScore[1] = 0
         self.tricksScore[2] = 0
         for p in self.playersOrder:
-            self.hands[p] = []
+            self._hands[p] = []
             p.active = True
     def deal_hand(self):
         self._deck = [value + suit for value in VALUES for suit in SUITS]
@@ -192,7 +198,6 @@ class Game:
                         print(p.name,":",self.trump)
                 return
 
-
     def score_hand(self):
         callingTeamNum = self.team_num_for(self.caller)
         nonCallingTeamNum = (callingTeamNum%2)+1
@@ -216,14 +221,13 @@ class Game:
             self.gameScore[nonCallingTeamNum]+=2
     def print_hand(self):
         #print the hand of each player
-        print("------------------- Trump:", self._trump, "---------------")
+        print("------------------- Trump:", self.trump, "---------------")
         for index in range(4):
             p = self.playersOrder[index]
             if p not in self.inactives:
-                print(self.position_for(p),p.name,self.hands[p])
+                print(self.position_for(p),p.name,self._hands[p])
             else:
                 print(self.position_for(p),p.name,"*** asleep ***")
-
 
     def hand_for(self,player):
         #returns the hand of player
@@ -269,6 +273,7 @@ class Game:
                 return 's'
             case 'd':
                 return 'h'
+
     def best_card(self,cards,trump=None,led=None):
         #returns the winning card from cards given trump and led suits
         #correct even if trump and or led are None
@@ -312,9 +317,17 @@ class Game:
                 bestCard = card
                 bestCardScore = score
         return bestCard
+    def has_suit(self,cards,trump,suit):
+        #returns true if a card of suit suit is in cards
+        for card in cards:
+            cardSuit = self.get_suit(card,trump)
+            if cardSuit == suit:
+                return True
+        return False
+
 
     def _rotate_until_dealer(self,dealerIndex):
-        while self.playersOrder[3]!=self._players[dealerIndex]:
+        while self.playersOrder[3]!=self.players[dealerIndex]:
             self._rotate()
     def _rotate(self):
         self.playersOrder = self.playersOrder[1:] + self.playersOrder[:1]
