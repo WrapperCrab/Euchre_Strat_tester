@@ -15,7 +15,7 @@ def main():
 
     numGames = 1 #number of games to be played
     neededScore = 10 #number of points to win a game
-    printOutput = True #is each hand printed in the console
+    printOutput = False #is each hand printed in the console
     for index in range(numGames):
         randSeed = randrange(-100000,100000)
         game = Game([p1,p2,p3,p4])

@@ -31,6 +31,8 @@ class Game:
         self.trump = None
         self.caller = None
         self.dealer = None
+        self.tricks = []#stores trick data for current hand. array of arrays of cards
+        self.playersInTricks = []#stores players that played each card. Lines up with self.tricks
 
     def play_game(self,neededScore,randSeed,printOutput):
         seed(randSeed)
@@ -61,7 +63,9 @@ class Game:
         #play tricks
         for _ in range(5):
             trick = []
+            self.tricks.append(trick)
             playersInTrick = []
+            self.playersInTricks.append(playersInTrick)
             ledSuit = None
             for playerIndex in range(4):
                 p = self.playersOrder[playerIndex]
@@ -72,13 +76,8 @@ class Game:
                 if len(trick)==0:
                     #this is the first card in the trick
                     ledSuit = self.get_suit(card,self.trump)
-
-
                 #check for illegal play
                 playedSuit = self.get_suit(card,self.trump)
-
-
-
                 if (playedSuit!=ledSuit) and (self.has_suit(self._hands[p],self.trump,ledSuit)):
                     raise IllegalPlayException("Must play the led suit if you have it")
                 if card not in self._hands[p]:
@@ -87,6 +86,7 @@ class Game:
                 trick.append(card)
                 playersInTrick.append(p)
                 self._hands[p].remove(card)
+
             winningCard = self.best_card(trick,self.trump,ledSuit)
             winningPlayer = playersInTrick[trick.index(winningCard)]
             self.tricksScore[self.team_num_for(winningPlayer)]+=1
@@ -96,7 +96,6 @@ class Game:
                 print(winningPlayer.name,winningCard,trick)
         #score
         self.score_hand()
-
         #reset
         self.trump = None
         self.top_card = None
@@ -105,6 +104,8 @@ class Game:
         self.caller = None
         self.tricksScore[1] = 0
         self.tricksScore[2] = 0
+        self.tricks = []
+        self.playersInTricks = []
         for p in self.playersOrder:
             self._hands[p] = []
             p.active = True
@@ -112,6 +113,7 @@ class Game:
         self._deck = [value + suit for value in VALUES for suit in SUITS]
         shuffle(self._deck)
         parityDeal = 0
+        #Even in code, we must deal correctly! 32322323
         for index in range(4):
             p=self.playersOrder[index]
             cardsToDeal = 0
@@ -132,6 +134,7 @@ class Game:
     def call_trump(self,printOutput):
         if printOutput:
             print("top card", self.topCard)
+        #first round of bidding
         for index in range(4):
             p=self.playersOrder[index]
             callResult = p.call(self.topCard)#True, False, or "alone"
@@ -161,8 +164,7 @@ class Game:
             return
         if printOutput:
             print("top card flipped over")
-
-        #second pass
+        #second round of bidding
         for playerIndex in range(4):
             p=self.playersOrder[playerIndex]
             call = p.call2(self.topCard)
@@ -324,7 +326,6 @@ class Game:
             if cardSuit == suit:
                 return True
         return False
-
 
     def _rotate_until_dealer(self,dealerIndex):
         while self.playersOrder[3]!=self.players[dealerIndex]:
