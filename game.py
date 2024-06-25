@@ -34,6 +34,7 @@ class Game:
         self.tricks = []#stores trick data for current hand. array of arrays of cards
         self.playersInTricks = []#stores players that played each card. Lines up with self.tricks
 
+    #functions for game process. Not to be called by Player
     def play_game(self,neededScore,randSeed,printOutput):
         seed(randSeed)
         #select a random dealer
@@ -171,6 +172,7 @@ class Game:
             if call[1]==False:
                 #they passed
                 if p==self.dealer:
+                    #This implements stick the dealer rules
                     raise IllegalPlayException("The dealer go screwed but didn't call a suit")
                 #this is a legal pass
                 if printOutput:
@@ -221,6 +223,17 @@ class Game:
         else:
             #calling team lost
             self.gameScore[nonCallingTeamNum]+=2
+    #functions for managing player order
+    def _rotate_until_dealer(self,dealerIndex):
+        while self.playersOrder[3]!=self.players[dealerIndex]:
+            self._rotate()
+    def _rotate(self):
+        self.playersOrder = self.playersOrder[1:] + self.playersOrder[:1]
+    def _rotate_until_first(self,winner):
+        #called after a player wins a trick
+        while self.playersOrder[0]!=winner:
+            self._rotate()
+
     def print_hand(self):
         #print the hand of each player
         print("------------------- Trump:", self.trump, "---------------")
@@ -231,6 +244,7 @@ class Game:
             else:
                 print(self.position_for(p),p.name,"*** asleep ***")
 
+    #functions to be called by Players
     def hand_for(self,player):
         #returns the hand of player
         return self._hands[player]
@@ -275,7 +289,6 @@ class Game:
                 return 's'
             case 'd':
                 return 'h'
-
     def best_card(self,cards,trump=None,led=None):
         #returns the winning card from cards given trump and led suits
         #correct even if trump and or led are None
@@ -326,16 +339,6 @@ class Game:
             if cardSuit == suit:
                 return True
         return False
-
-    def _rotate_until_dealer(self,dealerIndex):
-        while self.playersOrder[3]!=self.players[dealerIndex]:
-            self._rotate()
-    def _rotate(self):
-        self.playersOrder = self.playersOrder[1:] + self.playersOrder[:1]
-    def _rotate_until_first(self,winner):
-        #called after a player wins a trick
-        while self.playersOrder[0]!=winner:
-            self._rotate()
 
 class IllegalPlayException(Exception):
     pass
