@@ -1,4 +1,5 @@
 import copy
+import time
 
 SUITS = ['s','h','d','c']
 VALUES = ['9','T','J','Q','K','A']
@@ -48,6 +49,9 @@ class Gamestate: # Stores all the date for any stage of one hand of euchre (no g
 
         # look over all children and calculate their value
         moves = self.get_legal_moves()
+        if self.stage == 'discard' or self.stage == 'play':
+            moves = self.get_distinct_moves(moves)
+
         count = 0
         for moveIndex in range(len(moves)):
             child = self.create_child_from_move(moveIndex)
@@ -185,9 +189,6 @@ class Gamestate: # Stores all the date for any stage of one hand of euchre (no g
         #Create the child
         return Gamestate(newStage, newTopCard, newPlayerToGo, newHands, newKitty, newCall, newTricksScore, newTrick, newInactives, newHandComplete, newNestLevel, newKey)
 
-
-
-
     def print_summary(self):
         print("")
         print("State Summary:")
@@ -231,13 +232,13 @@ class Gamestate: # Stores all the date for any stage of one hand of euchre (no g
                 moves.append('call')
                 # moves.append('alone')
             case 'call2':
+                if self.playerToGo != self._dealerIndex:
+                    moves.append('pass')
                 turnedSuit = self.topCard[1]
                 for suit in SUITS: #!! Does this work?
                     if suit != turnedSuit:
                         moves.append([suit, False])
                         # moves.append([suit, True])
-                if self.playerToGo != self._dealerIndex:
-                    moves.append('pass')
             case 'discard':
                 for card in self.hands[self.playerToGo]:
                     moves.append(card)
@@ -257,6 +258,58 @@ class Gamestate: # Stores all the date for any stage of one hand of euchre (no g
                         for card in playerHand:
                             moves.append(card)
         return moves
+
+    def get_distinct_moves(self, moves):
+        # from the given list of moves (cards assumed to be in same hand), checks which are equivalent
+        # Removes the stronger of two equivalent moves
+        trump = self.call[1]
+        distinctMoves = copy.deepcopy(moves)
+        for i in range(len(moves)-1):
+            moveI = moves[i]
+            for j in range(1, len(moves)):
+                moveJ = moves[j]
+                if moveI not in distinctMoves or moveJ not in distinctMoves:
+                    continue
+                if self.cards_are_equivalent(moveI, moveJ):
+                    distinctMoves.remove(self.best_card([moveI, moveJ], trump))
+        return distinctMoves
+
+    def cards_are_equivalent(self, card1, card2):
+        trump = self.call[1]
+        if self.get_suit(card1, trump) != self.get_suit(card2, trump):
+            return False
+        for card in self.get_cards_between_value(card1, card2):
+            for i in range(4):
+                if i!=self.playerToGo and card in self.hands[i]:
+                    return False
+        return True
+
+    def get_cards_between_value(self, card1, card2):
+        # Returns a list of cards between value of card1 and card 2
+        # inputted cards expected to have same suit
+        betweenCards = []
+        trump = self.call[1]
+        suit = self.get_suit(card1, trump)
+        suitCards = self.get_cards_of_suit(suit, trump)
+
+        value1 = suitCards.index(card1)
+        value2 = suitCards.index(card2)
+        if value1 > value2:
+            value1, value2 = value2, value1
+
+        for i in range(value1+1, value2):
+            betweenCards.append(suitCards[i])
+        return betweenCards
+        
+    def get_cards_of_suit(self, suit, trump):
+        nextSuit = self.next_suit(trump)
+        if suit == trump:
+            return [['9', suit], ['T', suit], ['Q', suit], ['K', suit], ['A', suit], ['J', nextSuit], ['J', suit]]
+        if suit == nextSuit:
+            return [['9', suit], ['T', suit], ['Q', suit], ['K', suit], ['A', suit]]
+        else:
+            return [['9', suit], ['T', suit], ['J', suit], ['Q', suit], ['K', suit], ['A', suit]]
+
 
     def score_hand(self):
         callingTeamIndex = self.team_index_for(self.call[0])

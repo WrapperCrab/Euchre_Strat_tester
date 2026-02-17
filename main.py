@@ -10,14 +10,14 @@ from random import randrange
 
 def main():
     testState = Gamestate(
-        'call', ['9','h'], 0, 
+        'call', ['A','s'], 0, 
         [
-            [['J','d'], ['T','s'], ['K','s'], ['Q','s'], ['T','s']],
-            [['9','s'], ['A','c'], ['K','c'], ['Q','c'], ['T','c']],
-            [['9','c'], ['A','h'], ['K','h'], ['Q','h'], ['T','h']],
-            [['9','d'], ['A','d'], ['K','d'], ['Q','d'], ['T','d']]
+            [['J','d'], ['T','c'], ['K','s'], ['T','d'], ['Q','c']],
+            [['J','h'], ['T','h'], ['J','s'], ['T','s'], ['K','h']],
+            [['Q','d'], ['A','h'], ['A','d'], ['K','c'], ['9','c']],
+            [['A','c'], ['Q','h'], ['J','c'], ['9','d'], ['9','h']]
         ], 
-        [['J','s'], ['J','c'], ['J','h'], ['9','h']], None, 
+        [['A','s'], ['K','d'], ['9','s'], ['Q','s']], None, 
         [0,0], [], [], 
         False, 0, '_'
     )
@@ -25,10 +25,8 @@ def main():
     # random.shuffle(testState.hands[1])
     # random.shuffle(testState.hands[2])
     # random.shuffle(testState.hands[3])
-    testState.print_verbose()
 
     testState.find_value()
-
     testState.print_verbose()
     tempState = copy.copy(testState)
     while True:
@@ -54,6 +52,7 @@ if __name__=='__main__':
 
     # Variations of this are interesting. In this one, it takes forever to calculate and the optimal strat has 1st pass
     # and let the partner call it. On this hand! Lol!
+    # Takes ungodly long for topcard 9h. It's clear we need to add some speedup strategies
     # testState = Gamestate(
     #     'call', ['9','s'], 0, 
     #     [
