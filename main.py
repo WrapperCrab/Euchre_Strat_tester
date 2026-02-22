@@ -10,21 +10,22 @@ from random import randrange
 
 def main():
     testState = Gamestate(
-        'call', ['A','s'], 0, 
+        'call', ['9','c'], 0, 
         [
-            [['J','d'], ['T','c'], ['K','s'], ['T','d'], ['Q','c']],
-            [['J','h'], ['T','h'], ['J','s'], ['T','s'], ['K','h']],
-            [['Q','d'], ['A','h'], ['A','d'], ['K','c'], ['9','c']],
-            [['A','c'], ['Q','h'], ['J','c'], ['9','d'], ['9','h']]
+            [['9','h'], ['A','d'], ['9','d'], ['T','s'], ['K','h']],
+            [['Q','s'], ['J','s'], ['K','d'], ['A','h'], ['A','s']],
+            [['T','d'], ['T','c'], ['K','s'], ['J','d'], ['Q','c']],
+            [['Q','d'], ['A','c'], ['9','s'], ['Q','h'], ['J','c']]
         ], 
-        [['A','s'], ['K','d'], ['9','s'], ['Q','s']], None, 
+        [['9','c'], ['T','h'], ['J','h'], ['K','c']], None, 
         [0,0], [], [], 
         False, 0, '_'
     )
-    # random.shuffle(testState.hands[0])
-    # random.shuffle(testState.hands[1])
-    # random.shuffle(testState.hands[2])
-    # random.shuffle(testState.hands[3])
+
+    random.shuffle(testState.hands[0])
+    random.shuffle(testState.hands[1])
+    random.shuffle(testState.hands[2])
+    random.shuffle(testState.hands[3])
 
     testState.find_value()
     testState.print_verbose()

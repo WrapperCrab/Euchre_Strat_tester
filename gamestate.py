@@ -51,7 +51,6 @@ class Gamestate: # Stores all the date for any stage of one hand of euchre (no g
         moves = self.get_legal_moves()
         if self.stage == 'discard' or self.stage == 'play':
             moves = self.get_distinct_moves(moves)
-
         count = 0
         for moveIndex in range(len(moves)):
             child = self.create_child_from_move(moveIndex)
@@ -76,41 +75,51 @@ class Gamestate: # Stores all the date for any stage of one hand of euchre (no g
                         self.bestTrajectory = str(moveIndex) + child.bestTrajectory
                         self.bestChild = child
 
-
-            #!!!Check if we have reached the best value
+            # Check if we have reached the best value
             if self.stage == 'play':
                 if self.playerToGo in self._teams[0] and self.value == self.get_max_possible_value():
                     return self.value
-                elif self.value == self.get_min_possible_value():
+                elif self.playerToGo in self._teams[1] and self.value == self.get_min_possible_value():
                     return self.value
             count += 1
         return self.value
 
-    def get_max_possible_value(self):#!!! Does not account for loners
+    def get_max_possible_value(self):
         # Calculates the highest score differential for team 1 possible given the call and the current trick score
         if self.team_index_for(self.call[0]) == 0:
             #team 1 called
             if self.tricksScore[1] == 0:
-                return 2
-            elif 1 <= self.tricksScore[1] and self.tricksScore[1] <=2:
+                if self.call[2] == True:
+                    # This is a loner call
+                    return 4
+                else:
+                    return 2
+            elif 1 <= self.tricksScore[1] and self.tricksScore[1] <= 2:
                 return 1
             else:
                 return -2
         else:
             #team 2 called
             if self.tricksScore[1] == 5:
-                return -2
+                if self.call[2] == True:
+                    return -4
+                else:
+                    return -2
             elif 3 <= self.tricksScore[1] and self.tricksScore[1] <= 4:
                 return -1
             else:
                 return 2
-    def get_min_possible_value(self):#!!! Does not account for loners
+    def get_min_possible_value(self):
         #!! Should becombined with get_max_possible_value using sign_team_score
         # Calculates the highest score differential for team 2 possible given the call and the current trick score
         if self.team_index_for(self.call[0]) == 1:
             #team 2 called
             if self.tricksScore[0] == 0:
-                return -2
+                if self.call[2] == True:
+                    # This is a loner call
+                    return -4
+                else:
+                    return -2
             elif 1 <= self.tricksScore[0] and self.tricksScore[0] <=2:
                 return -1
             else:
@@ -118,7 +127,10 @@ class Gamestate: # Stores all the date for any stage of one hand of euchre (no g
         else:
             #team 1 called
             if self.tricksScore[0] == 5:
-                return 2
+                if self.call[2] == True:
+                    return 4
+                else:
+                    return 2
             elif 3 <= self.tricksScore[0] and self.tricksScore[0] <= 4:
                 return 1
             else:
@@ -141,9 +153,6 @@ class Gamestate: # Stores all the date for any stage of one hand of euchre (no g
         newNestLevel = self.nestLevel + 1
         keyAdd = str(moveIndex) #new part of the key added by the most recent action
 
-
-        # newKey = self.key + str(moveIndex)#!!!
-
         #calculate changes to state
         match self.stage:
             case 'call': #move is 'pass' 'call' or 'alone'
@@ -160,8 +169,14 @@ class Gamestate: # Stores all the date for any stage of one hand of euchre (no g
                         newHands[3].append(newTopCard)
                         newKitty.remove(newTopCard)
                         newCall = copy.deepcopy([self.playerToGo, newTopCard[1], False])
-                    case 'alone':#!!! Leave empty for now
-                        pass
+                    case 'alone':
+                        newStage = 'discard'
+                        keyAdd = str(moveIndex) + '-'
+                        newPlayerToGo = 3
+                        newHands[3].append(newTopCard)
+                        newKitty.remove(newTopCard)
+                        newCall = copy.deepcopy([self.playerToGo, newTopCard[1], True])
+                        newInactives.append((self.playerToGo+2)%4) # Add teammate to inactives
             case 'call2':
                 if move == 'pass':
                     newPlayerToGo = (self.playerToGo+1)%4
@@ -170,29 +185,52 @@ class Gamestate: # Stores all the date for any stage of one hand of euchre (no g
                     keyAdd = str(moveIndex) + '-'
                     newPlayerToGo = 0
                     newCall = copy.deepcopy([self.playerToGo, move[0], False])
-                else: #!!! This is a loner. leave empty for now
-                    pass
-            case 'discard': #!!! Does not account for loners
+                else:
+                    newStage = 'play'
+                    keyAdd = str(moveIndex) + '-'
+                    newPlayerToGo = 0
+                    teammateNumber = (self.playerToGo+2)%4
+                    if teammateNumber == 0:
+                        newPlayerToGo = 1
+                    newCall = copy.deepcopy([self.playerToGo, move[0], True])
+                    newInactives.append(teammateNumber) # Add teammate to inactives
+            case 'discard':
                 newStage = 'play'
                 keyAdd = str(moveIndex) + '-'
                 newPlayerToGo = 0
+                if 0 in self.inactives:
+                    newPlayerToGo = 1
                 newHands[3].remove(move)
                 newKitty.append(move)
-            case 'play': #!!! Does not account for loners
+            case 'play':
                 trump = self.call[1] #helper
                 newTrick.append(move)
+                newHands[self.playerToGo].remove(move)
+                nextPlayerIsInactive = False # Helps keep track of which player goes next
+
+                # Is the next player in the rotation inactive?
+                if (self.playerToGo + 1)%4 in self.inactives:
+                    # Append the inactive player's lack of move to the trick
+                    newTrick.append('N/A')
+                    nextPlayerIsInactive = True
+
+                # Check if we are done with the trick
                 if len(newTrick) == 4:
                     keyAdd = str(moveIndex) + ';'
                     bestCard = self.best_card(newTrick, trump, self.get_suit(newTrick[0], trump))
-                    newPlayerToGo = ((newTrick.index(bestCard))+(self.playerToGo+1)%4)%4
-                    newHands[self.playerToGo].remove(move)
+                    newPlayerToGo = (newTrick.index(bestCard) + self.playerToGo + 1)%4
+                    if nextPlayerIsInactive:
+                        # Add 2 to "get past" the inactive player
+                        newPlayerToGo = (newTrick.index(bestCard) + self.playerToGo + 2)%4
                     newTricksScore[self.team_index_for(newPlayerToGo)] += 1
                     newTrick = []
                     if len(newHands[0]) == 0:
                         newHandComplete = True
                 else:
-                    newPlayerToGo = (self.playerToGo+1)%4
-                    newHands[self.playerToGo].remove(move)
+                    # There is still at least 1 active player yet to play this trick
+                    newPlayerToGo = (self.playerToGo + 1)%4
+                    if nextPlayerIsInactive:
+                        newPlayerToGo = (self.playerToGo + 2)%4
 
         #Create the child
         newKey = self.key + keyAdd
@@ -233,21 +271,24 @@ class Gamestate: # Stores all the date for any stage of one hand of euchre (no g
         print("The hand is over: " + str(self.handComplete))
         print("---------------------------------")
 
-    def get_legal_moves(self): #!!! No loners for now
+    def get_legal_moves(self):
         moves = []
         match self.stage:
             case 'call':
                 moves.append('pass')
                 moves.append('call')
-                # moves.append('alone')
+                moves.append('alone')
             case 'call2':
                 if self.playerToGo != self._dealerIndex:
                     moves.append('pass')
                 turnedSuit = self.topCard[1]
-                for suit in SUITS: #!! Does this work?
+                for suit in SUITS:
                     if suit != turnedSuit:
                         moves.append([suit, False])
-                        # moves.append([suit, True])
+                # Append the loner calls second
+                for suit in SUITS:
+                    if suit != turnedSuit:
+                        moves.append([suit, True])
             case 'discard':
                 for card in self.hands[self.playerToGo]:
                     moves.append(card)
@@ -273,23 +314,30 @@ class Gamestate: # Stores all the date for any stage of one hand of euchre (no g
         # Removes the stronger of two equivalent moves
         trump = self.call[1]
         distinctMoves = copy.deepcopy(moves)
+        # print(distinctMoves)
         for i in range(len(moves)-1):
             moveI = moves[i]
-            for j in range(1, len(moves)):
+            for j in range(i+1, len(moves)):
                 moveJ = moves[j]
                 if moveI not in distinctMoves or moveJ not in distinctMoves:
                     continue
                 if self.cards_are_equivalent(moveI, moveJ):
+                    # print("moveI was " + str(moveI))
+                    # print("moveJ was " + str(moveJ))
                     distinctMoves.remove(self.best_card([moveI, moveJ], trump))
+                    # print(distinctMoves)
+        # time.sleep(999)
         return distinctMoves
 
-    def cards_are_equivalent(self, card1, card2):
+    def cards_are_equivalent(self, card1, card2):#Assumes card1 and card2 are playertogo's hand
         trump = self.call[1]
         if self.get_suit(card1, trump) != self.get_suit(card2, trump):
             return False
+        # These cards have same suit
         for card in self.get_cards_between_value(card1, card2):
             for i in range(4):
-                if i!=self.playerToGo and card in self.hands[i]:
+                if i!=self.playerToGo and (i not in self.inactives) and card in self.hands[i]:
+                    # This card is in another active player's hand
                     return False
         return True
 
@@ -366,6 +414,8 @@ class Gamestate: # Stores all the date for any stage of one hand of euchre (no g
         bestCard = None
         bestCardScore = 0
         for card in cards:
+            if card == 'N/A':# there is probably a nicer way to remove "noncards" from consideration
+                continue
             score = 0
             if trump == card[1]:
                 if card[0] == 'J':
