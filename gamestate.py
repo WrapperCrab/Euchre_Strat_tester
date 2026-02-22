@@ -139,7 +139,10 @@ class Gamestate: # Stores all the date for any stage of one hand of euchre (no g
         newInactives = copy.copy(self.inactives)
         newHandComplete = self.handComplete
         newNestLevel = self.nestLevel + 1
-        newKey = self.key + str(moveIndex)
+        keyAdd = str(moveIndex) #new part of the key added by the most recent action
+
+
+        # newKey = self.key + str(moveIndex)#!!!
 
         #calculate changes to state
         match self.stage:
@@ -148,9 +151,11 @@ class Gamestate: # Stores all the date for any stage of one hand of euchre (no g
                     case 'pass':
                         if self.playerToGo == 3:
                             newStage = 'call2'
+                            keyAdd = str(moveIndex) + ';'
                         newPlayerToGo = (self.playerToGo+1)%4
                     case 'call':
                         newStage = 'discard'
+                        keyAdd = str(moveIndex) + '-'
                         newPlayerToGo = 3
                         newHands[3].append(newTopCard)
                         newKitty.remove(newTopCard)
@@ -162,12 +167,14 @@ class Gamestate: # Stores all the date for any stage of one hand of euchre (no g
                     newPlayerToGo = (self.playerToGo+1)%4
                 elif move[1] == False:
                     newStage = 'play'
+                    keyAdd = str(moveIndex) + '-'
                     newPlayerToGo = 0
                     newCall = copy.deepcopy([self.playerToGo, move[0], False])
                 else: #!!! This is a loner. leave empty for now
                     pass
             case 'discard': #!!! Does not account for loners
                 newStage = 'play'
+                keyAdd = str(moveIndex) + '-'
                 newPlayerToGo = 0
                 newHands[3].remove(move)
                 newKitty.append(move)
@@ -175,6 +182,7 @@ class Gamestate: # Stores all the date for any stage of one hand of euchre (no g
                 trump = self.call[1] #helper
                 newTrick.append(move)
                 if len(newTrick) == 4:
+                    keyAdd = str(moveIndex) + ';'
                     bestCard = self.best_card(newTrick, trump, self.get_suit(newTrick[0], trump))
                     newPlayerToGo = ((newTrick.index(bestCard))+(self.playerToGo+1)%4)%4
                     newHands[self.playerToGo].remove(move)
@@ -187,6 +195,7 @@ class Gamestate: # Stores all the date for any stage of one hand of euchre (no g
                     newHands[self.playerToGo].remove(move)
 
         #Create the child
+        newKey = self.key + keyAdd
         return Gamestate(newStage, newTopCard, newPlayerToGo, newHands, newKitty, newCall, newTricksScore, newTrick, newInactives, newHandComplete, newNestLevel, newKey)
 
     def print_summary(self):
